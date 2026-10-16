@@ -3,10 +3,24 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CriarReservaDto } from './dto/criar-reserva.dto';
+import { ReservasValidacaoService } from './reservas-validacao.service';
 
 @Injectable()
 export class ReservasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+  private readonly prisma: PrismaService,
+  private readonly validacao: ReservasValidacaoService,
+) {}
+
+  validarDadosCriacao(dto: CriarReservaDto) {
+  this.validacao.validarCriacao(dto);
+
+  return {
+    valido: true,
+    mensagem: 'Validações locais realizadas com sucesso.',
+  };
+}
 
   async listarReservas() {
     return this.prisma.reserva.findMany({
