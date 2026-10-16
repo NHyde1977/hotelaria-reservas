@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model hospede_reserva {
+  id                 String               @id @db.Char(36)
+  reserva_id         String               @db.Char(36)
+  usuario_id         String               @db.Char(36)
+  tipo               hospede_reserva_tipo
+  autorizado_checkin Boolean              @default(false)
+  reserva            reserva              @relation(fields: [reserva_id], references: [id], onUpdate: Restrict, map: "fk_hospede_reserva")
+
+  @@unique([reserva_id, usuario_id], map: "uk_reserva_usuario")
+  @@index([usuario_id], map: "idx_hospede_usuario")
+}
+
+model log_auditoria {
+  id                     String             @id @db.Char(36)
+  reserva_id             String             @db.Char(36)
+  usuario_responsavel_id String             @db.Char(36)
+  acao                   log_auditoria_acao
+  valor_anterior         String?            @db.Text
+  valor_novo             String?            @db.Text
+  data_hora              DateTime           @default(now()) @db.DateTime(0)
+  reserva                reserva            @relation(fields: [reserva_id], references: [id], onUpdate: Restrict, map: "fk_log_reserva")
+
+  @@index([reserva_id, data_hora], map: "idx_log_reserva_data")
+  @@index([usuario_responsavel_id], map: "idx_log_usuario")
+}
+
+model reserva {
+  id                      String            @id @db.Char(36)
+  quarto_id               BigInt
+  data_previsao_checkin   DateTime          @db.Date
+  data_previsao_checkout  DateTime          @db.Date
+  data_checkin            DateTime?         @db.DateTime(0)
+  data_checkout           DateTime?         @db.DateTime(0)
+  status                  reserva_status    @default(PENDENTE_PAGAMENTO)
+  valor_diaria_contratada Decimal           @db.Decimal(10, 2)
+  valor_total_contratado  Decimal           @db.Decimal(10, 2)
+  data_criacao            DateTime          @default(now()) @db.DateTime(0)
+  data_atualizacao        DateTime          @default(now()) @db.DateTime(0)
+  hospede_reserva         hospede_reserva[]
+  log_auditoria           log_auditoria[]
+
+  @@index([data_criacao], map: "idx_reserva_data_criacao")
+  @@index([quarto_id, data_previsao_checkin, data_previsao_checkout], map: "idx_reserva_quarto_periodo")
+  @@index([status], map: "idx_reserva_status")
+}
+
+enum hospede_reserva_tipo {
+  TITULAR
+  HOSPEDE
+}
+
+enum log_auditoria_acao {
+  ADICIONAR_DADO
+  DELETAR_DADO
+  EDITAR_DADO
+}
+
+enum reserva_status {
+  PENDENTE_PAGAMENTO
+  CONFIRMADA
+  EM_HOSPEDAGEM
+  CHECKOUT_REALIZADO
+  FINALIZADA
+  CANCELADA
+}
