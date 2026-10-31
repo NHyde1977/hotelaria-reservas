@@ -1,4 +1,6 @@
-
+import { Body, Post } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
+import { CriarReservaDto } from './dto/criar-reserva.dto';
 import {
   Controller,
   Get,
@@ -21,6 +23,27 @@ export class ReservasController {
   constructor(
     private readonly reservasService: ReservasService,
   ) {}
+
+  
+@Post()
+@ApiOperation({
+  summary: 'Validar solicitação de criação de reserva',
+  description:
+    'Executa as validações locais. Ainda não realiza a criação no banco.',
+})
+@ApiBody({ type: CriarReservaDto })
+@ApiResponse({
+  status: 200,
+  description: 'Dados locais validados com sucesso.',
+})
+@ApiResponse({
+  status: 400,
+  description: 'Dados inválidos ou regras de negócio não atendidas.',
+})
+async validarCriacao(@Body() dto: CriarReservaDto) {
+  return this.reservasService.validarDadosCriacao(dto);
+}
+
 
   @Get()
   @ApiOperation({
