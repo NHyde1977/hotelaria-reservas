@@ -25,24 +25,40 @@ export class ReservasController {
   ) {}
 
   
+
 @Post()
 @ApiOperation({
   summary: 'Validar solicitação de criação de reserva',
   description:
-    'Executa as validações locais. Ainda não realiza a criação no banco.',
+    'Executa as validações locais e consulta o serviço de Usuários ' +
+    'para verificar a situação cadastral dos hóspedes e a maioridade ' +
+    'do titular. Ainda não realiza a criação no banco.',
 })
 @ApiBody({ type: CriarReservaDto })
 @ApiResponse({
   status: 200,
-  description: 'Dados locais validados com sucesso.',
+  description: 'Dados locais e usuários validados com sucesso.',
 })
 @ApiResponse({
   status: 400,
   description: 'Dados inválidos ou regras de negócio não atendidas.',
 })
+@ApiResponse({
+  status: 404,
+  description: 'Usuário informado não encontrado.',
+})
+@ApiResponse({
+  status: 502,
+  description: 'Resposta inesperada do serviço de Usuários.',
+})
+@ApiResponse({
+  status: 503,
+  description: 'Serviço de Usuários indisponível.',
+})
 async validarCriacao(@Body() dto: CriarReservaDto) {
   return this.reservasService.validarDadosCriacao(dto);
 }
+
 
 
   @Get()

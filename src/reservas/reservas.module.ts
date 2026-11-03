@@ -1,3 +1,4 @@
+import { ReservasQuartosValidacaoService } from './reservas-quartos-validacao.service';
 
 import { Module } from '@nestjs/common';
 
@@ -18,6 +19,7 @@ import { ReservasUsuariosValidacaoService } from './reservas-usuarios-validacao.
     ReservasValidacaoService,
     ReservasDisponibilidadeService,
     ReservasUsuariosValidacaoService,
+    ReservasQuartosValidacaoService,
   ],
 })
 export class ReservasModule {}

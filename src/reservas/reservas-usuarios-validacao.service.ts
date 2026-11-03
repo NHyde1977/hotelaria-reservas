@@ -51,4 +51,14 @@ export class ReservasUsuariosValidacaoService {
       );
     }
   }
+
+  
+validarSituacaoCadastral(usuario: Usuario): void {
+  if (usuario.status !== 'ATIVO') {
+    throw new BadRequestException(
+      `O usuário ${usuario.id} não possui cadastro ativo.`,
+    );
+  }
+}
+
 }
