@@ -1,22 +1,25 @@
-
+import { Prisma, reserva_status } from '@prisma/client';
 import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { reserva_status } from '@prisma/client';
+
 
 @Injectable()
 export class ReservasDisponibilidadeService {
   constructor(private readonly prisma: PrismaService) {}
+  
 
   async verificarDisponibilidade(
-    quartoId: bigint,
-    checkin: string,
-    checkout: string,
-    reservaIdExcluir?: string,
-  ): Promise<void> {
-    const conflito = await this.prisma.reserva.findFirst({
+  quartoId: bigint,
+  checkin: string,
+  checkout: string,
+  reservaIdExcluir?: string,
+  transacao?: Prisma.TransactionClient,
+): Promise<void> {
+  const cliente = transacao ?? this.prisma;
+  const conflito = await cliente.reserva.findFirst({
       where: {
         quarto_id: quartoId,
 

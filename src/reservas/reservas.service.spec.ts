@@ -1,7 +1,10 @@
+import { ReservasCalculoService } from './reservas-calculo.service';
+
 import { ReservasDisponibilidadeService } from './reservas-disponibilidade.service';
 
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -67,6 +70,7 @@ describe('ReservasService - validação de usuários e quartos', () => {
   quartosClient as unknown as QuartosClientService,
   new ReservasQuartosValidacaoService(),
   disponibilidade as unknown as ReservasDisponibilidadeService,
+  new ReservasCalculoService(),
 );
 
     const hoje = new Intl.DateTimeFormat('en-CA', {
@@ -270,5 +274,59 @@ it('deve rejeitar reserva quando o serviço de Quartos estiver indisponível', a
     ServiceUnavailableException,
   );
 });
+
+
+it('deve rejeitar reserva quando houver conflito de datas', async () => {
+  // Simular usuários válidos.
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  // Simular uma reserva existente para o período solicitado.
+  disponibilidade.verificarDisponibilidade.mockRejectedValue(
+    new ConflictException(
+      'O quarto já possui uma reserva para o período solicitado.',
+    ),
+  );
+
+  // Verificar se o conflito é propagado pelo serviço.
+  await expect(service.validarDadosCriacao(dto)).rejects.toThrow(
+    ConflictException,
+  );
+
+  // Confirmar os parâmetros enviados à consulta de disponibilidade.
+  expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledWith(
+    BigInt(dto.quartoId),
+    dto.dataPrevisaoCheckin,
+    dto.dataPrevisaoCheckout,
+  );
+});
+
+
+it('deve validar a disponibilidade quando não houver conflito de datas', async () => {
+  // Simular usuários válidos.
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  // Simular ausência de conflitos no banco.
+  disponibilidade.verificarDisponibilidade.mockResolvedValue(undefined);
+
+  // Executar o fluxo completo de validação.
+  const resultado = await service.validarDadosCriacao(dto);
+
+  // Confirmar que a disponibilidade foi consultada.
+  expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledTimes(1);
+
+  expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledWith(
+    BigInt(dto.quartoId),
+    dto.dataPrevisaoCheckin,
+    dto.dataPrevisaoCheckout,
+  );
+
+  // Confirmar que a validação foi concluída.
+  expect(resultado.valido).toBe(true);
+});
+
 
 });

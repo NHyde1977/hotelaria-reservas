@@ -1,4 +1,4 @@
-import { Body, Post } from '@nestjs/common';
+import { Body, HttpCode, Post } from '@nestjs/common';
 import { ApiBody } from '@nestjs/swagger';
 import { CriarReservaDto } from './dto/criar-reserva.dto';
 import {
@@ -24,41 +24,43 @@ export class ReservasController {
     private readonly reservasService: ReservasService,
   ) {}
 
-  
-
-@Post()
-@ApiOperation({
-  summary: 'Validar solicitação de criação de reserva',
-  description:
-    'Executa as validações locais e consulta o serviço de Usuários ' +
-    'para verificar a situação cadastral dos hóspedes e a maioridade ' +
-    'do titular. Ainda não realiza a criação no banco.',
-})
-@ApiBody({ type: CriarReservaDto })
-@ApiResponse({
-  status: 200,
-  description: 'Dados locais e usuários validados com sucesso.',
-})
-@ApiResponse({
-  status: 400,
-  description: 'Dados inválidos ou regras de negócio não atendidas.',
-})
-@ApiResponse({
-  status: 404,
-  description: 'Usuário informado não encontrado.',
-})
-@ApiResponse({
-  status: 502,
-  description: 'Resposta inesperada do serviço de Usuários.',
-})
-@ApiResponse({
-  status: 503,
-  description: 'Serviço de Usuários indisponível.',
-})
-async validarCriacao(@Body() dto: CriarReservaDto) {
-  return this.reservasService.validarDadosCriacao(dto);
-}
-
+  @Post()
+  @ApiOperation({
+    summary: 'Validar solicitação de criação de reserva',
+    description:
+      'Executa as validações locais, consulta os microsserviços de ' +
+      'Usuários e Quartos e verifica conflitos de disponibilidade ' +
+      'no banco de Reservas. Ainda não realiza a criação da reserva.',
+  })
+  @ApiBody({ type: CriarReservaDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Solicitação validada com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos ou regras de negócio não atendidas.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Usuário ou quarto não encontrado.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Já existe uma reserva para o quarto no período solicitado.',
+  })
+  @ApiResponse({
+    status: 502,
+    description: 'Resposta inesperada de um microsserviço externo.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Microsserviço externo indisponível.',
+  })
+  @HttpCode(200)
+  async validarCriacao(@Body() dto: CriarReservaDto) {
+    return this.reservasService.validarDadosCriacao(dto);
+  }
 
 
   @Get()

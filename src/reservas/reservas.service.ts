@@ -1,3 +1,7 @@
+import { randomUUID } from 'node:crypto';
+import { Prisma, reserva_status } from '@prisma/client';
+import { Quarto } from '../integracoes/quartos/quarto.interface';
+import { ReservasCalculoService } from './reservas-calculo.service';
 import {
   Injectable,
   NotFoundException,
@@ -22,6 +26,7 @@ export class ReservasService {
   private readonly quartosClient: QuartosClientService,
   private readonly quartosValidacao: ReservasQuartosValidacaoService,
   private readonly disponibilidade: ReservasDisponibilidadeService,
+  private readonly calculo: ReservasCalculoService,
 ) {}
 
   
@@ -81,6 +86,44 @@ async validarDadosCriacao(dto: CriarReservaDto) {
   };
 }
 
+
+prepararDadosCriacao(
+  dto: CriarReservaDto,
+  quarto: Quarto,
+): Prisma.reservaCreateInput {
+  const valores = this.calculo.calcularValorContratado(
+    dto.dataPrevisaoCheckin,
+    dto.dataPrevisaoCheckout,
+    quarto.tipo.precoDiaria,
+  );
+
+  return {
+    id: randomUUID(),
+    quarto_id: BigInt(dto.quartoId),
+
+    data_previsao_checkin: new Date(
+      `${dto.dataPrevisaoCheckin}T00:00:00Z`,
+    ),
+
+    data_previsao_checkout: new Date(
+      `${dto.dataPrevisaoCheckout}T00:00:00Z`,
+    ),
+
+    status: reserva_status.PENDENTE_PAGAMENTO,
+
+    valor_diaria_contratada: valores.valorDiaria,
+    valor_total_contratado: valores.valorTotal,
+
+    hospede_reserva: {
+      create: dto.hospedes.map((hospede) => ({
+        id: randomUUID(),
+        usuario_id: hospede.usuarioId,
+        tipo: hospede.tipo,
+        autorizado_checkin: hospede.autorizadoCheckin,
+      })),
+    },
+  };
+}
 
 
   async listarReservas() {

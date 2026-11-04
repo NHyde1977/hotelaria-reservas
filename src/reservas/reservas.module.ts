@@ -1,3 +1,5 @@
+import { ReservasCalculoService } from './reservas-calculo.service';
+
 import { ReservasQuartosValidacaoService } from './reservas-quartos-validacao.service';
 
 import { Module } from '@nestjs/common';
