@@ -2,6 +2,7 @@
 import { ConflictException } from '@nestjs/common';
 import { ReservasDisponibilidadeService } from './reservas-disponibilidade.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { reserva_status } from '@prisma/client';
 
 describe('ReservasDisponibilidadeService', () => {
@@ -126,4 +127,67 @@ describe('ReservasDisponibilidadeService', () => {
 
     expect(argumentos.where.id).toBeUndefined();
   });
+
+  it('deve utilizar o cliente transacional quando fornecido', async () => {
+  const prismaNormal = {
+    reserva: {
+      findFirst: jest.fn(),
+    },
+  };
+
+  const clienteTransacional = {
+    reserva: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
+  };
+
+  const service = new ReservasDisponibilidadeService(
+    prismaNormal as unknown as PrismaService,
+  );
+
+  await service.verificarDisponibilidade(
+    10n,
+    '2026-12-10',
+    '2026-12-13',
+    undefined,
+    clienteTransacional as unknown as Prisma.TransactionClient,
+  );
+
+  expect(clienteTransacional.reserva.findFirst).toHaveBeenCalledTimes(1);
+  expect(prismaNormal.reserva.findFirst).not.toHaveBeenCalled();
+});
+
+it('deve rejeitar conflito encontrado pelo cliente transacional', async () => {
+  const prismaNormal = {
+    reserva: {
+      findFirst: jest.fn(),
+    },
+  };
+
+  const clienteTransacional = {
+    reserva: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+      }),
+    },
+  };
+
+  const service = new ReservasDisponibilidadeService(
+    prismaNormal as unknown as PrismaService,
+  );
+
+  await expect(
+    service.verificarDisponibilidade(
+      10n,
+      '2026-12-10',
+      '2026-12-13',
+      undefined,
+      clienteTransacional as unknown as Prisma.TransactionClient,
+    ),
+  ).rejects.toThrow(ConflictException);
+
+  expect(clienteTransacional.reserva.findFirst).toHaveBeenCalledTimes(1);
+  expect(prismaNormal.reserva.findFirst).not.toHaveBeenCalled();
+});
+
 });

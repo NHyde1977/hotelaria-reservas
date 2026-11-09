@@ -5,6 +5,7 @@ import { ReservasCalculoService } from './reservas-calculo.service';
 import {
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CriarReservaDto } from './dto/criar-reserva.dto';
@@ -29,7 +30,6 @@ export class ReservasService {
   private readonly calculo: ReservasCalculoService,
 ) {}
 
-  
 
 async validarDadosCriacao(dto: CriarReservaDto) {
   // 1. Validar datas e composição dos hóspedes.
@@ -70,7 +70,6 @@ async validarDadosCriacao(dto: CriarReservaDto) {
     dto.hospedes.length,
   );
 
-  
   await this.disponibilidade.verificarDisponibilidade(
     BigInt(dto.quartoId),
     dto.dataPrevisaoCheckin,
@@ -125,6 +124,59 @@ prepararDadosCriacao(
   };
 }
 
+
+
+async persistirReservaValidada(
+  dto: CriarReservaDto,
+  quarto: Quarto,
+) {
+  const dados = this.prepararDadosCriacao(dto, quarto);
+
+  const maxTentativas = 3;
+
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          await this.disponibilidade.verificarDisponibilidade(
+            BigInt(dto.quartoId),
+            dto.dataPrevisaoCheckin,
+            dto.dataPrevisaoCheckout,
+            undefined,
+            tx,
+          );
+
+          return tx.reserva.create({
+            data: dados,
+            include: {
+              hospede_reserva: true,
+            },
+          });
+        },
+        {
+          isolationLevel:
+            Prisma.TransactionIsolationLevel.Serializable,
+        },
+      );
+    } catch (erro) {
+      const erroConcorrencia =
+        erro instanceof Prisma.PrismaClientKnownRequestError &&
+        erro.code === 'P2034';
+
+      if (!erroConcorrencia) {
+  throw erro;
+}
+
+if (tentativa === maxTentativas) {
+  throw new ServiceUnavailableException(
+    'Não foi possível concluir a reserva devido a conflitos simultâneos. Tente novamente.',
+  );
+}
+    }
+  }
+
+  throw new Error('Não foi possível concluir a transação.');
+}
 
   async listarReservas() {
     return this.prisma.reserva.findMany({

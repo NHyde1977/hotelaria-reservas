@@ -1,0 +1,30 @@
+
+services:
+  mysql-test:
+    image: mysql:5.7.30
+    container_name: hotelaria-mysql-test
+    restart: "no"
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root_test_local
+      MYSQL_DATABASE: hotelaria_reservas_test
+      MYSQL_USER: hotelaria_test
+      MYSQL_PASSWORD: hotelaria_test_local
+
+    ports:
+      - "127.0.0.1:3307:3306"
+
+    volumes:
+      - hotelaria_mysql_test_data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h 127.0.0.1 -u root -p"$$MYSQL_ROOT_PASSWORD" --silent
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  hotelaria_mysql_test_data:
