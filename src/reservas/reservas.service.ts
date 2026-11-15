@@ -3,6 +3,7 @@ import { Prisma, reserva_status } from '@prisma/client';
 import { Quarto } from '../integracoes/quartos/quarto.interface';
 import { ReservasCalculoService } from './reservas-calculo.service';
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -199,13 +200,222 @@ if (tentativa === maxTentativas) {
   throw new Error('Não foi possível concluir a transação.');
 }
 
-  async listarReservas() {
-    return this.prisma.reserva.findMany({
-      orderBy: {
-        data_criacao: 'desc',
-      },
+
+async confirmarReserva(id: string) {
+  const resultado = await this.prisma.reserva.updateMany({
+    where: {
+      id,
+      status: reserva_status.PENDENTE_PAGAMENTO,
+    },
+    data: {
+      status: reserva_status.CONFIRMADA,
+      data_atualizacao: new Date(),
+    },
+  });
+
+  if (resultado.count === 0) {
+    const reserva = await this.prisma.reserva.findUnique({
+      where: { id },
+      select: { status: true },
     });
+
+    if (!reserva) {
+      throw new NotFoundException(
+        `Reserva com ID ${id} não encontrada.`,
+      );
+    }
+
+    throw new ConflictException(
+      `Não é possível confirmar uma reserva com status ${reserva.status}.`,
+    );
   }
+
+  const reservaConfirmada = await this.prisma.reserva.findUniqueOrThrow({
+    where: { id },
+    include: { hospede_reserva: true },
+  });
+
+  return this.formatarRespostaReserva(reservaConfirmada);
+}
+  
+
+async cancelarReserva(id: string) {
+  const resultado = await this.prisma.reserva.updateMany({
+    where: {
+      id,
+      status: {
+        in: [
+          reserva_status.PENDENTE_PAGAMENTO,
+          reserva_status.CONFIRMADA,
+        ],
+      },
+    },
+    data: {
+      status: reserva_status.CANCELADA,
+      data_atualizacao: new Date(),
+    },
+  });
+
+  if (resultado.count === 0) {
+    const reserva = await this.prisma.reserva.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!reserva) {
+      throw new NotFoundException(
+        `Reserva com ID ${id} não encontrada.`,
+      );
+    }
+
+    throw new ConflictException(
+      `Não é possível cancelar uma reserva com status ${reserva.status}.`,
+    );
+  }
+
+  const reservaCancelada = await this.prisma.reserva.findUniqueOrThrow({
+    where: { id },
+    include: { hospede_reserva: true },
+  });
+
+  return this.formatarRespostaReserva(reservaCancelada);
+}
+
+
+async realizarCheckin(id: string) {
+  const agora = new Date();
+
+  const resultado = await this.prisma.reserva.updateMany({
+    where: {
+      id,
+      status: reserva_status.CONFIRMADA,
+    },
+    data: {
+      status: reserva_status.EM_HOSPEDAGEM,
+      data_checkin: agora,
+      data_atualizacao: agora,
+    },
+  });
+
+  if (resultado.count === 0) {
+    const reserva = await this.prisma.reserva.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!reserva) {
+      throw new NotFoundException(
+        `Reserva com ID ${id} não encontrada.`,
+      );
+    }
+
+    throw new ConflictException(
+      `Não é possível realizar check-in de uma reserva com status ${reserva.status}.`,
+    );
+  }
+
+  const reservaAtualizada = await this.prisma.reserva.findUniqueOrThrow({
+    where: { id },
+    include: { hospede_reserva: true },
+  });
+
+  return this.formatarRespostaReserva(reservaAtualizada);
+}
+
+
+async realizarCheckout(id: string) {
+  const agora = new Date();
+
+  const resultado = await this.prisma.reserva.updateMany({
+    where: {
+      id,
+      status: reserva_status.EM_HOSPEDAGEM,
+    },
+    data: {
+      status: reserva_status.CHECKOUT_REALIZADO,
+      data_checkout: agora,
+      data_atualizacao: agora,
+    },
+  });
+
+  if (resultado.count === 0) {
+    const reserva = await this.prisma.reserva.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!reserva) {
+      throw new NotFoundException(
+        `Reserva com ID ${id} não encontrada.`,
+      );
+    }
+
+    throw new ConflictException(
+      `Não é possível realizar checkout de uma reserva com status ${reserva.status}.`,
+    );
+  }
+
+  const reservaAtualizada = await this.prisma.reserva.findUniqueOrThrow({
+    where: { id },
+    include: { hospede_reserva: true },
+  });
+
+  return this.formatarRespostaReserva(reservaAtualizada);
+}
+
+
+async finalizarReserva(id: string) {
+  const resultado = await this.prisma.reserva.updateMany({
+    where: {
+      id,
+      status: reserva_status.CHECKOUT_REALIZADO,
+    },
+    data: {
+      status: reserva_status.FINALIZADA,
+      data_atualizacao: new Date(),
+    },
+  });
+
+  if (resultado.count === 0) {
+    const reserva = await this.prisma.reserva.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!reserva) {
+      throw new NotFoundException(
+        `Reserva com ID ${id} não encontrada.`,
+      );
+    }
+
+    throw new ConflictException(
+      `Não é possível finalizar uma reserva com status ${reserva.status}.`,
+    );
+  }
+
+  const reservaAtualizada = await this.prisma.reserva.findUniqueOrThrow({
+    where: { id },
+    include: { hospede_reserva: true },
+  });
+
+  return this.formatarRespostaReserva(reservaAtualizada);
+}
+
+
+async listarReservas() {
+  const reservas = await this.prisma.reserva.findMany({
+    orderBy: {
+      data_criacao: 'desc',
+    },
+    include: {
+      hospede_reserva: true,
+    },
+  });
+
+  return reservas.map((reserva) =>
+    this.formatarRespostaReserva(reserva),
+  );
+}
 
   async buscarReservaPorId(id: string) {
     const reserva = await this.prisma.reserva.findUnique({
@@ -221,6 +431,6 @@ if (tentativa === maxTentativas) {
       );
     }
 
-    return reserva;
+    return this.formatarRespostaReserva(reserva);
   }
 }

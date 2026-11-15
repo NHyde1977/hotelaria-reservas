@@ -8,11 +8,34 @@ import { ReservasService } from './reservas.service';
 import { ReservasDisponibilidadeService } from './reservas-disponibilidade.service';
 import { ReservasCalculoService } from './reservas-calculo.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { criarBarreiraConcorrencia } from './barreira-concorrencia';
 
 describe('Reservas - integração com MySQL', () => {
   let prisma: PrismaClient;
   let reservasService: ReservasService;
 
+
+function criarDisponibilidadeInstrumentada(
+  prismaService: PrismaService,
+  barreira: ReturnType<typeof criarBarreiraConcorrencia>,
+) {
+  const disponibilidade = new ReservasDisponibilidadeService(
+    prismaService,
+  );
+
+  const verificarOriginal =
+    disponibilidade.verificarDisponibilidade.bind(disponibilidade);
+
+  jest
+    .spyOn(disponibilidade, 'verificarDisponibilidade')
+    .mockImplementation(async (...args) => {
+      await verificarOriginal(...args);
+
+      await barreira.aguardar();
+    });
+
+  return disponibilidade;
+}
   beforeAll(async () => {
     const databaseUrl = process.env.DATABASE_URL;
 
@@ -266,4 +289,105 @@ describe('Reservas - integração com MySQL', () => {
       }
     }
   });
+
+
+it('deve executar o ciclo de vida e o cancelamento de reservas', async () => {
+  const reservaPrincipalId = randomUUID();
+  const reservaCancelamentoId = randomUUID();
+  const hospedeId = randomUUID();
+
+  const criarReservaTeste = async (id: string) => {
+    await prisma.reserva.create({
+      data: {
+        id,
+        quarto_id: BigInt(999001),
+        data_previsao_checkin: new Date('2026-12-10T00:00:00Z'),
+        data_previsao_checkout: new Date('2026-12-12T00:00:00Z'),
+        status: 'PENDENTE_PAGAMENTO',
+        valor_diaria_contratada: '200.00',
+        valor_total_contratado: '400.00',
+      },
+    });
+  };
+
+  try {
+    await criarReservaTeste(reservaPrincipalId);
+    await criarReservaTeste(reservaCancelamentoId);
+
+    const confirmada =
+      await reservasService.confirmarReserva(reservaPrincipalId);
+
+    expect(confirmada.status).toBe('CONFIRMADA');
+
+    const checkin =
+      await reservasService.realizarCheckin(reservaPrincipalId);
+
+    expect(checkin.status).toBe('EM_HOSPEDAGEM');
+
+    const checkout =
+      await reservasService.realizarCheckout(reservaPrincipalId);
+
+    expect(checkout.status).toBe('CHECKOUT_REALIZADO');
+
+    const finalizada =
+      await reservasService.finalizarReserva(reservaPrincipalId);
+
+    expect(finalizada.status).toBe('FINALIZADA');
+
+    const cancelada =
+      await reservasService.cancelarReserva(reservaCancelamentoId);
+
+    expect(cancelada.status).toBe('CANCELADA');
+
+    const registros = await prisma.reserva.findMany({
+      where: {
+        id: { in: [reservaPrincipalId, reservaCancelamentoId] },
+      },
+    });
+
+    const principal = registros.find(
+      (reserva) => reserva.id === reservaPrincipalId,
+    );
+
+    const cancelamento = registros.find(
+      (reserva) => reserva.id === reservaCancelamentoId,
+    );
+
+    expect(principal?.status).toBe('FINALIZADA');
+    expect(principal?.data_checkin).not.toBeNull();
+    expect(principal?.data_checkout).not.toBeNull();
+
+    expect(cancelamento?.status).toBe('CANCELADA');
+
+    await expect(
+      reservasService.confirmarReserva(reservaPrincipalId),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+  } finally {
+    await prisma.hospede_reserva.deleteMany({
+      where: {
+        reserva_id: {
+          in: [reservaPrincipalId, reservaCancelamentoId],
+        },
+      },
+    });
+
+    await prisma.log_auditoria.deleteMany({
+      where: {
+        reserva_id: {
+          in: [reservaPrincipalId, reservaCancelamentoId],
+        },
+      },
+    });
+
+    await prisma.reserva.deleteMany({
+      where: {
+        id: {
+          in: [reservaPrincipalId, reservaCancelamentoId],
+        },
+      },
+    });
+  }
+});
+
 });

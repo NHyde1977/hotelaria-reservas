@@ -17,11 +17,12 @@ import { ReservasUsuariosValidacaoService } from './reservas-usuarios-validacao.
   imports: [QuartosModule, UsuariosModule],
   controllers: [ReservasController],
   providers: [
-    ReservasService,
-    ReservasValidacaoService,
-    ReservasDisponibilidadeService,
-    ReservasUsuariosValidacaoService,
-    ReservasQuartosValidacaoService,
-  ],
+  ReservasService,
+  ReservasValidacaoService,
+  ReservasDisponibilidadeService,
+  ReservasUsuariosValidacaoService,
+  ReservasQuartosValidacaoService,
+  ReservasCalculoService,
+],
 })
 export class ReservasModule {}
