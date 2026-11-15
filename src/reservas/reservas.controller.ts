@@ -1,28 +1,16 @@
 import { Body, HttpCode, Post } from '@nestjs/common';
 import { ApiBody } from '@nestjs/swagger';
 import { CriarReservaDto } from './dto/criar-reserva.dto';
-import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 
-import {
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { ReservasService } from './reservas.service';
 
 @ApiTags('Reservas')
 @Controller('reservas')
 export class ReservasController {
-  constructor(
-    private readonly reservasService: ReservasService,
-  ) {}
+  constructor(private readonly reservasService: ReservasService) {}
 
   @Post()
   @ApiOperation({
@@ -59,9 +47,14 @@ export class ReservasController {
   })
   @HttpCode(200)
   async validarCriacao(@Body() dto: CriarReservaDto) {
-    return this.reservasService.validarDadosCriacao(dto);
-  }
+    const { valido, mensagem } =
+      await this.reservasService.validarDadosCriacao(dto);
 
+    return {
+      valido,
+      mensagem,
+    };
+  }
 
   @Get()
   @ApiOperation({
@@ -79,8 +72,7 @@ export class ReservasController {
   @Get(':id')
   @ApiOperation({
     summary: 'Consultar reserva por ID',
-    description:
-      'Retorna os dados da reserva e seus hóspedes associados.',
+    description: 'Retorna os dados da reserva e seus hóspedes associados.',
   })
   @ApiParam({
     name: 'id',

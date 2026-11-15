@@ -124,11 +124,21 @@ describe('ReservasService - validação de usuários e quartos', () => {
       criarUsuario(id),
     );
 
-    await expect(service.validarDadosCriacao(dto)).resolves.toEqual({
-      valido: true,
-      mensagem:
-        'Validações locais, de usuários e de quarto realizadas com sucesso.',
-    });
+    await expect(service.validarDadosCriacao(dto)).resolves.toMatchObject({
+  valido: true,
+  mensagem:
+    'Validações locais, de usuários e de quarto realizadas com sucesso.',
+  quarto: {
+    id: 1,
+    status: 'ATIVO',
+    disponibilidade: 'DISPONIVEL',
+    tipo: {
+      nome: 'Duplo',
+      capacidadeMaxima: 2,
+      precoDiaria: '350.00',
+    },
+  },
+});
 
     expect(usuariosClient.buscarPorId).toHaveBeenCalledTimes(2);
     expect(usuariosClient.buscarPorId).toHaveBeenCalledWith(titularId);

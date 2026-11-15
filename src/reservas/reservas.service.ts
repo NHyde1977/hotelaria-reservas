@@ -82,9 +82,30 @@ async validarDadosCriacao(dto: CriarReservaDto) {
     valido: true,
     mensagem:
       'Validações locais, de usuários e de quarto realizadas com sucesso.',
+    quarto,
   };
 }
 
+async criarReserva(dto: CriarReservaDto) {
+  const { quarto } = await this.validarDadosCriacao(dto);
+
+  const reserva = await this.persistirReservaValidada(dto, quarto);
+
+  return this.formatarRespostaReserva(reserva);
+}
+
+formatarRespostaReserva(
+  reserva: Awaited<ReturnType<ReservasService['persistirReservaValidada']>>,
+) {
+  return {
+    ...reserva,
+    quarto_id: reserva.quarto_id.toString(),
+    valor_diaria_contratada:
+      reserva.valor_diaria_contratada.toString(),
+    valor_total_contratado:
+      reserva.valor_total_contratado.toString(),
+  };
+}
 
 prepararDadosCriacao(
   dto: CriarReservaDto,
