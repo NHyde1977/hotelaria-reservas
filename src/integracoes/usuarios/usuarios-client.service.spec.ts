@@ -25,7 +25,7 @@ describe('UsuariosClientService', () => {
   };
 
   beforeEach(() => {
-    process.env.USUARIOS_SERVICE_URL = 'http://localhost:3002';
+    process.env.USUARIOS_SERVICE_URL = 'http://localhost:3002/api';
 
     httpGet = jest.fn();
 
@@ -41,15 +41,26 @@ describe('UsuariosClientService', () => {
   });
 
   it('deve retornar os dados de um usuário existente', async () => {
-    const response = {
-      data: usuario,
-      status: 200,
-    } as AxiosResponse<Usuario>;
+  const response = {
+    data: {
+      id: usuarioId,
+      nome: 'Maria Silva',
+      data_nascimento: '1990-05-20',
+      status: 'ATIVO',
+    },
+    status: 200,
+  } as AxiosResponse;
 
-    httpGet.mockReturnValue(of(response));
+  httpGet.mockReturnValue(of(response));
 
-    await expect(service.buscarPorId(usuarioId)).resolves.toEqual(usuario);
+  await expect(service.buscarPorId(usuarioId)).resolves.toEqual({
+    id: usuarioId,
+    nome: 'Maria Silva',
+    dataNascimento: '1990-05-20',
+    status: 'ATIVO',
+    roles: [],
   });
+});
 
   it('deve retornar 404 quando o usuário não existir', async () => {
     const error = new AxiosError(
@@ -58,12 +69,12 @@ describe('UsuariosClientService', () => {
       undefined,
       undefined,
       {
-  status: 404,
-  statusText: 'Not Found',
-  data: {},
-  headers: {},
-  config: {} as any,
-},
+        status: 404,
+        statusText: 'Not Found',
+        data: {},
+        headers: {},
+        config: {} as any,
+      },
     );
 
     httpGet.mockReturnValue(throwError(() => error));
@@ -124,7 +135,7 @@ describe('UsuariosClientService', () => {
     await service.buscarPorId(usuarioId);
 
     expect(httpGet).toHaveBeenCalledWith(
-      `http://localhost:3002/usuarios/${usuarioId}`,
+      `http://localhost:3002/api/usuarios/${usuarioId}`,
     );
   });
 });

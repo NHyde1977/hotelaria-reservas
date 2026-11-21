@@ -8,7 +8,7 @@ import {
 import { HttpService } from '@nestjs/axios';
 import axios from 'axios';
 import { firstValueFrom } from 'rxjs';
-import { Usuario } from './usuario.interface';
+import { Usuario, UsuarioApiResponse } from './usuario.interface';
 
 @Injectable()
 export class UsuariosClientService {
@@ -25,12 +25,20 @@ export class UsuariosClientService {
 
     try {
       const response = await firstValueFrom(
-        this.http.get<Usuario>(
-          `${baseUrl.replace(/\/$/, '')}/usuarios/${usuarioId}`,
-        ),
-      );
+  this.http.get<UsuarioApiResponse>(
+    `${baseUrl.replace(/\/$/, '')}/usuarios/${usuarioId}`,
+  ),
+);
 
-      return response.data;
+const dados = response.data;
+
+return {
+  id: dados.id,
+  nome: dados.nome,
+  dataNascimento: dados.data_nascimento,
+  status: dados.status,
+  roles: dados.roles ?? [],
+};
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
