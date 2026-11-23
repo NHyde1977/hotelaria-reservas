@@ -1,10 +1,14 @@
+
 export interface Quarto {
-  id: number;
+  id: string;
+  id_tipo_quarto: string;
+  numero: number;
   status: 'ATIVO' | 'INATIVO';
   disponibilidade: 'DISPONIVEL' | 'INDISPONIVEL';
-  tipo: {
+  tipo_quarto: {
+    id: string;
     nome: string;
-    capacidadeMaxima: number;
-    precoDiaria: string;
+    capacidade_maxima: number;
+    preco_diaria: string;
   };
 }

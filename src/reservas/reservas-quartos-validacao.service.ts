@@ -21,7 +21,7 @@ export class ReservasQuartosValidacaoService {
       );
     }
 
-    if (quantidadeHospedes > quarto.tipo.capacidadeMaxima) {
+    if (quantidadeHospedes > quarto.tipo_quarto.capacidade_maxima) {
       throw new BadRequestException(
         'A quantidade de hóspedes excede a capacidade máxima do quarto.',
       );

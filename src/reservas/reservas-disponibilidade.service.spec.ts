@@ -190,4 +190,20 @@ it('deve rejeitar conflito encontrado pelo cliente transacional', async () => {
   expect(prismaNormal.reserva.findFirst).not.toHaveBeenCalled();
 });
 
+
+it('deve retornar o quarto indisponível quando existe reserva conflitante', async () => {
+  findFirst.mockResolvedValue({
+    id: '550e8400-e29b-41d4-a716-446655440000',
+  });
+
+  const resultado = await service.consultarQuartosIndisponiveis(
+    ['101'],
+    '2026-12-10',
+    '2026-12-13',
+  );
+
+  expect(resultado).toEqual(['101']);
+  expect(findFirst).toHaveBeenCalledTimes(1);
+});
+
 });

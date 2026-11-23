@@ -1,30 +1,43 @@
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
   IsDateString,
-  IsInt,
-  Min,
+  IsOptional,
+  IsString,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CriarHospedeDto } from './criar-hospede.dto';
 
 export class CriarReservaDto {
-  @ApiProperty({
-    description: 'Identificador do quarto.',
-    example: 101,
-    minimum: 1,
-    type: Number,
+  @ApiPropertyOptional({
+    description:
+      'ID do quarto físico. Informe quartoId ou tipoQuartoId, nunca ambos.',
+    example: '101',
+    type: String,
   })
-  @IsInt()
-  @Min(1)
-  quartoId!: number;
+  @IsOptional()
+  @IsString()
+  @Matches(/^[1-9]\d*$/)
+  quartoId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'ID do tipo de quarto. O sistema selecionará um quarto disponível.',
+    example: '3',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[1-9]\d*$/)
+  tipoQuartoId?: string;
 
   @ApiProperty({
     description: 'Data prevista para entrada, no formato YYYY-MM-DD.',
-    example: '2026-11-15',
+    example: '2027-01-10',
     format: 'date',
   })
   @IsDateString()
@@ -32,7 +45,7 @@ export class CriarReservaDto {
 
   @ApiProperty({
     description: 'Data prevista para saída, no formato YYYY-MM-DD.',
-    example: '2026-11-20',
+    example: '2027-01-13',
     format: 'date',
   })
   @IsDateString()

@@ -149,16 +149,21 @@ function criarDisponibilidadeInstrumentada(
     const usuarioA = randomUUID();
     const usuarioB = randomUUID();
 
-    const quarto: Quarto = {
-      id: 999001,
-      status: 'ATIVO',
-      disponibilidade: 'DISPONIVEL',
-      tipo: {
-        nome: 'Duplo',
-        capacidadeMaxima: 2,
-        precoDiaria: '350.00',
-      },
-    };
+    
+const quarto: Quarto = {
+  id: '999001',
+  id_tipo_quarto: '2',
+  numero: 101,
+  status: 'ATIVO',
+  disponibilidade: 'DISPONIVEL',
+  tipo_quarto: {
+    id: '2',
+    nome: 'Duplo',
+    capacidade_maxima: 2,
+    preco_diaria: '350.00',
+  },
+};
+
 
     const dtoA: CriarReservaDto = {
       quartoId: quarto.id,
@@ -190,24 +195,29 @@ function criarDisponibilidadeInstrumentada(
 
     expect(dtoA.hospedes[0].usuarioId).not.toBe(dtoB.hospedes[0].usuarioId);
 
-    expect(quarto.tipo.precoDiaria).toBe('350.00');
+    expect(quarto.tipo_quarto.preco_diaria).toBe('350.00');
   });
 
   it('não deve persistir duas reservas concorrentes para o mesmo quarto e período', async () => {
-    const quartoId = 999001;
+    const quartoId = '999001';
     const checkin = '2026-12-10';
     const checkout = '2026-12-13';
 
-    const quarto: Quarto = {
-      id: quartoId,
-      status: 'ATIVO',
-      disponibilidade: 'DISPONIVEL',
-      tipo: {
-        nome: 'Duplo',
-        capacidadeMaxima: 2,
-        precoDiaria: '350.00',
-      },
-    };
+    
+const quarto: Quarto = {
+  id: quartoId,
+  id_tipo_quarto: '2',
+  numero: 101,
+  status: 'ATIVO',
+  disponibilidade: 'DISPONIVEL',
+  tipo_quarto: {
+    id: '2',
+    nome: 'Duplo',
+    capacidade_maxima: 2,
+    preco_diaria: '350.00',
+  },
+};
+
 
     const criarDto = (): CriarReservaDto => ({
       quartoId,

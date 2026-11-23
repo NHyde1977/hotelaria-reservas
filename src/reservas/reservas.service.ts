@@ -3,7 +3,8 @@ import { Prisma, reserva_status } from '@prisma/client';
 import { Quarto } from '../integracoes/quartos/quarto.interface';
 import { ReservasCalculoService } from './reservas-calculo.service';
 import {
-  ConflictException,
+  BadRequestException,
+ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -60,25 +61,40 @@ async validarDadosCriacao(dto: CriarReservaDto) {
     }
   }
 
-  // 4. Consultar o quarto na API externa.
-  const quarto = await this.quartosClient.buscarPorId(
-    dto.quartoId,
-  );
+  
+  // 4. Exigir exatamente uma forma de seleção do quarto.
+  const informouQuarto = dto.quartoId !== undefined;
+  const informouTipo = dto.tipoQuartoId !== undefined;
 
-  // 5. Validar situação e capacidade do quarto.
+  if (informouQuarto === informouTipo) {
+    throw new BadRequestException(
+      'Informe quartoId ou tipoQuartoId, mas não ambos.',
+    );
+  }
+
+  // 5. Consultar ou selecionar o quarto na API externa.
+  const quarto = dto.quartoId
+    ? await this.quartosClient.buscarPorId(dto.quartoId)
+    : await this.quartosClient.selecionarQuartoDisponivel(
+        dto.tipoQuartoId!,
+        dto.dataPrevisaoCheckin,
+        dto.dataPrevisaoCheckout,
+        dto.hospedes.length,
+      );
+
+  // 6. Validar situação e capacidade do quarto.
   this.quartosValidacao.validarQuarto(
     quarto,
     dto.hospedes.length,
   );
 
+  // 7. Verificar disponibilidade no banco de Reservas.
   await this.disponibilidade.verificarDisponibilidade(
-    BigInt(dto.quartoId),
+    BigInt(quarto.id),
     dto.dataPrevisaoCheckin,
     dto.dataPrevisaoCheckout,
   );
 
-
-  // 6. Retornar o resultado das validações.
   return {
     valido: true,
     mensagem:
@@ -86,6 +102,7 @@ async validarDadosCriacao(dto: CriarReservaDto) {
     quarto,
   };
 }
+
 
 async criarReserva(dto: CriarReservaDto) {
   const { quarto } = await this.validarDadosCriacao(dto);
@@ -108,6 +125,7 @@ formatarRespostaReserva(
   };
 }
 
+
 prepararDadosCriacao(
   dto: CriarReservaDto,
   quarto: Quarto,
@@ -115,12 +133,12 @@ prepararDadosCriacao(
   const valores = this.calculo.calcularValorContratado(
     dto.dataPrevisaoCheckin,
     dto.dataPrevisaoCheckout,
-    quarto.tipo.precoDiaria,
+    quarto.tipo_quarto.preco_diaria,
   );
 
   return {
     id: randomUUID(),
-    quarto_id: BigInt(dto.quartoId),
+    quarto_id: BigInt(quarto.id),
 
     data_previsao_checkin: new Date(
       `${dto.dataPrevisaoCheckin}T00:00:00Z`,
@@ -161,7 +179,7 @@ async persistirReservaValidada(
       return await this.prisma.$transaction(
         async (tx) => {
           await this.disponibilidade.verificarDisponibilidade(
-            BigInt(dto.quartoId),
+            BigInt(quarto.id),
             dto.dataPrevisaoCheckin,
             dto.dataPrevisaoCheckout,
             undefined,

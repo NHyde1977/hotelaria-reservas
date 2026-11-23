@@ -30,10 +30,10 @@ describe('ReservasValidacaoService', () => {
     };
 
     return {
-      quartoId: 101,
-      dataPrevisaoCheckin: formatarData(checkin),
-      dataPrevisaoCheckout: formatarData(checkout),
-      hospedes: [
+  quartoId: '101',
+  dataPrevisaoCheckin: formatarData(checkin),
+  dataPrevisaoCheckout: formatarData(checkout),
+  hospedes: [
         {
           usuarioId: titularId,
           tipo: TipoHospede.TITULAR,

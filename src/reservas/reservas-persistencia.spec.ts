@@ -13,7 +13,7 @@ import { Quarto } from '../integracoes/quartos/quarto.interface';
 
 describe('ReservasService - persistência transacional', () => {
   const dto: CriarReservaDto = {
-    quartoId: 10,
+    quartoId: '10',
     dataPrevisaoCheckin: '2026-12-10',
     dataPrevisaoCheckout: '2026-12-13',
     hospedes: [
@@ -25,16 +25,21 @@ describe('ReservasService - persistência transacional', () => {
     ],
   };
 
-  const quarto: Quarto = {
-    id: 10,
-    status: 'ATIVO',
-    disponibilidade: 'DISPONIVEL',
-    tipo: {
-      nome: 'Individual',
-      capacidadeMaxima: 1,
-      precoDiaria: '350.00',
-    },
-  };
+  
+const quarto: Quarto = {
+  id: '10',
+  id_tipo_quarto: '1',
+  numero: 10,
+  status: 'ATIVO',
+  disponibilidade: 'DISPONIVEL',
+  tipo_quarto: {
+    id: '1',
+    nome: 'Individual',
+    capacidade_maxima: 1,
+    preco_diaria: '350.00',
+  },
+};
+
 
   it('deve verificar disponibilidade e criar reserva na mesma transação', async () => {
     const ordem: string[] = [];

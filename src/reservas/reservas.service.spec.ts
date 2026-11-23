@@ -27,7 +27,10 @@ describe('ReservasService - validação de usuários e quartos', () => {
   let service: ReservasService;
 
   let usuariosClient: { buscarPorId: jest.Mock };
-  let quartosClient: { buscarPorId: jest.Mock };
+  let quartosClient: {
+  buscarPorId: jest.Mock;
+  selecionarQuartoDisponivel: jest.Mock;
+};
   let disponibilidade: {
   verificarDisponibilidade: jest.Mock;
 };
@@ -37,16 +40,21 @@ describe('ReservasService - validação de usuários e quartos', () => {
 
   let dto: CriarReservaDto;
 
-  const quartoValido: Quarto = {
-    id: 1,
-    status: 'ATIVO',
-    disponibilidade: 'DISPONIVEL',
-    tipo: {
-      nome: 'Duplo',
-      capacidadeMaxima: 2,
-      precoDiaria: '350.00',
-    },
-  };
+  
+const quartoValido: Quarto = {
+  id: '1',
+  id_tipo_quarto: '2',
+  numero: 101,
+  status: 'ATIVO',
+  disponibilidade: 'DISPONIVEL',
+  tipo_quarto: {
+    id: '2',
+    nome: 'Duplo',
+    capacidade_maxima: 2,
+    preco_diaria: '350.00',
+  },
+};
+
 
   // Preparação executada antes de cada teste.
   beforeEach(() => {
@@ -55,8 +63,9 @@ describe('ReservasService - validação de usuários e quartos', () => {
     };
 
     quartosClient = {
-      buscarPorId: jest.fn().mockResolvedValue(quartoValido),
-    };
+  buscarPorId: jest.fn().mockResolvedValue(quartoValido),
+  selecionarQuartoDisponivel: jest.fn().mockResolvedValue(quartoValido),
+};
 
     disponibilidade = {
   verificarDisponibilidade: jest.fn().mockResolvedValue(undefined),
@@ -87,7 +96,7 @@ describe('ReservasService - validação de usuários e quartos', () => {
     dataCheckout.setUTCDate(dataCheckout.getUTCDate() + 3);
 
     dto = {
-      quartoId: 1,
+      quartoId: '1',
       dataPrevisaoCheckin: dataCheckin.toISOString().slice(0, 10),
       dataPrevisaoCheckout: dataCheckout.toISOString().slice(0, 10),
       hospedes: [
@@ -124,28 +133,33 @@ describe('ReservasService - validação de usuários e quartos', () => {
       criarUsuario(id),
     );
 
-    await expect(service.validarDadosCriacao(dto)).resolves.toMatchObject({
+    
+await expect(service.validarDadosCriacao(dto)).resolves.toMatchObject({
   valido: true,
   mensagem:
     'Validações locais, de usuários e de quarto realizadas com sucesso.',
   quarto: {
-    id: 1,
+    id: '1',
+    id_tipo_quarto: '2',
+    numero: 101,
     status: 'ATIVO',
     disponibilidade: 'DISPONIVEL',
-    tipo: {
+    tipo_quarto: {
+      id: '2',
       nome: 'Duplo',
-      capacidadeMaxima: 2,
-      precoDiaria: '350.00',
+      capacidade_maxima: 2,
+      preco_diaria: '350.00',
     },
   },
 });
+
 
     expect(usuariosClient.buscarPorId).toHaveBeenCalledTimes(2);
     expect(usuariosClient.buscarPorId).toHaveBeenCalledWith(titularId);
     expect(usuariosClient.buscarPorId).toHaveBeenCalledWith(hospedeId);
 
     expect(quartosClient.buscarPorId).toHaveBeenCalledTimes(1);
-    expect(quartosClient.buscarPorId).toHaveBeenCalledWith(1);
+    expect(quartosClient.buscarPorId).toHaveBeenCalledWith('1');
   });
 
   // TESTE 2 - Hóspede com cadastro inativo.
@@ -256,13 +270,15 @@ it('deve rejeitar reserva quando a capacidade do quarto for insuficiente', async
     criarUsuario(id),
   );
 
-  quartosClient.buscarPorId.mockResolvedValue({
-    ...quartoValido,
-    tipo: {
-      ...quartoValido.tipo,
-      capacidadeMaxima: 1,
-    },
-  });
+  
+quartosClient.buscarPorId.mockResolvedValue({
+  ...quartoValido,
+  tipo_quarto: {
+    ...quartoValido.tipo_quarto,
+    capacidade_maxima: 1,
+  },
+});
+
 
   await expect(service.validarDadosCriacao(dto)).rejects.toThrow(
     BadRequestException,
@@ -286,33 +302,6 @@ it('deve rejeitar reserva quando o serviço de Quartos estiver indisponível', a
 });
 
 
-it('deve rejeitar reserva quando houver conflito de datas', async () => {
-  // Simular usuários válidos.
-  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
-    criarUsuario(id),
-  );
-
-  // Simular uma reserva existente para o período solicitado.
-  disponibilidade.verificarDisponibilidade.mockRejectedValue(
-    new ConflictException(
-      'O quarto já possui uma reserva para o período solicitado.',
-    ),
-  );
-
-  // Verificar se o conflito é propagado pelo serviço.
-  await expect(service.validarDadosCriacao(dto)).rejects.toThrow(
-    ConflictException,
-  );
-
-  // Confirmar os parâmetros enviados à consulta de disponibilidade.
-  expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledWith(
-    BigInt(dto.quartoId),
-    dto.dataPrevisaoCheckin,
-    dto.dataPrevisaoCheckout,
-  );
-});
-
-
 it('deve validar a disponibilidade quando não houver conflito de datas', async () => {
   // Simular usuários válidos.
   usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
@@ -329,13 +318,131 @@ it('deve validar a disponibilidade quando não houver conflito de datas', async 
   expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledTimes(1);
 
   expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledWith(
-    BigInt(dto.quartoId),
+    BigInt(quartoValido.id),
     dto.dataPrevisaoCheckin,
     dto.dataPrevisaoCheckout,
   );
 
   // Confirmar que a validação foi concluída.
   expect(resultado.valido).toBe(true);
+});
+
+
+it('deve consultar a disponibilidade durante a validação inicial', async () => {
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  const resultado = await service.validarDadosCriacao(dto);
+
+  expect(resultado.valido).toBe(true);
+  expect(resultado.quarto).toEqual(quartoValido);
+
+  expect(
+    disponibilidade.verificarDisponibilidade,
+  ).toHaveBeenCalledTimes(1);
+
+  expect(
+    disponibilidade.verificarDisponibilidade,
+  ).toHaveBeenCalledWith(
+    BigInt(quartoValido.id),
+    dto.dataPrevisaoCheckin,
+    dto.dataPrevisaoCheckout,
+  );
+});
+
+it('deve rejeitar a reserva quando houver conflito de disponibilidade', async () => {
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  disponibilidade.verificarDisponibilidade.mockRejectedValue(
+    new ConflictException(
+      'O quarto já possui uma reserva para o período solicitado.',
+    ),
+  );
+
+  await expect(
+    service.validarDadosCriacao(dto),
+  ).rejects.toThrow(ConflictException);
+
+  expect(
+    disponibilidade.verificarDisponibilidade,
+  ).toHaveBeenCalledWith(
+    BigInt(quartoValido.id),
+    dto.dataPrevisaoCheckin,
+    dto.dataPrevisaoCheckout,
+  );
+});
+
+
+it('deve selecionar automaticamente um quarto pelo tipo solicitado', async () => {
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  const dtoPorTipo: CriarReservaDto = {
+    ...dto,
+    quartoId: undefined,
+    tipoQuartoId: '2',
+  };
+
+  const resultado = await service.validarDadosCriacao(dtoPorTipo);
+
+  expect(resultado.valido).toBe(true);
+  expect(resultado.quarto).toEqual(quartoValido);
+
+  expect(quartosClient.selecionarQuartoDisponivel).toHaveBeenCalledWith(
+    '2',
+    dtoPorTipo.dataPrevisaoCheckin,
+    dtoPorTipo.dataPrevisaoCheckout,
+    2,
+  );
+
+  expect(quartosClient.buscarPorId).not.toHaveBeenCalled();
+
+  expect(disponibilidade.verificarDisponibilidade).toHaveBeenCalledWith(
+    1n,
+    dtoPorTipo.dataPrevisaoCheckin,
+    dtoPorTipo.dataPrevisaoCheckout,
+  );
+});
+
+it('deve rejeitar reserva quando quartoId e tipoQuartoId forem informados juntos', async () => {
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  const dtoComAmbos: CriarReservaDto = {
+    ...dto,
+    tipoQuartoId: '2',
+  };
+
+  await expect(
+    service.validarDadosCriacao(dtoComAmbos),
+  ).rejects.toThrow(BadRequestException);
+
+  expect(quartosClient.buscarPorId).not.toHaveBeenCalled();
+  expect(quartosClient.selecionarQuartoDisponivel).not.toHaveBeenCalled();
+});
+
+it('deve rejeitar reserva quando nenhum identificador de quarto for informado', async () => {
+  usuariosClient.buscarPorId.mockImplementation(async (id: string) =>
+    criarUsuario(id),
+  );
+
+  const dtoSemQuarto: CriarReservaDto = {
+    ...dto,
+    quartoId: undefined,
+    tipoQuartoId: undefined,
+  };
+
+  await expect(
+    service.validarDadosCriacao(dtoSemQuarto),
+  ).rejects.toThrow(BadRequestException);
+
+  expect(quartosClient.buscarPorId).not.toHaveBeenCalled();
+  expect(quartosClient.selecionarQuartoDisponivel).not.toHaveBeenCalled();
 });
 
 

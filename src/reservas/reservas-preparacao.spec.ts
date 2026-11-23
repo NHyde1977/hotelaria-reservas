@@ -13,7 +13,7 @@ describe('ReservasService - preparação dos dados', () => {
   const hospedeId = '550e8400-e29b-41d4-a716-446655440001';
 
   const dto: CriarReservaDto = {
-    quartoId: 10,
+    quartoId: '10',
     dataPrevisaoCheckin: '2026-12-10',
     dataPrevisaoCheckout: '2026-12-13',
     hospedes: [
@@ -30,16 +30,21 @@ describe('ReservasService - preparação dos dados', () => {
     ],
   };
 
-  const quarto: Quarto = {
-    id: 10,
-    status: 'ATIVO',
-    disponibilidade: 'DISPONIVEL',
-    tipo: {
-      nome: 'Duplo',
-      capacidadeMaxima: 2,
-      precoDiaria: '350.00',
-    },
-  };
+  
+const quarto: Quarto = {
+  id: '10',
+  id_tipo_quarto: '2',
+  numero: 10,
+  status: 'ATIVO',
+  disponibilidade: 'DISPONIVEL',
+  tipo_quarto: {
+    id: '2',
+    nome: 'Duplo',
+    capacidade_maxima: 2,
+    preco_diaria: '350.00',
+  },
+};
+
 
   beforeEach(() => {
     service = new ReservasService(
@@ -129,4 +134,31 @@ describe('ReservasService - preparação dos dados', () => {
     expect(ids[0]).not.toBe(ids[1]);
     expect(ids).not.toContain(dados.id);
   });
+
+
+it('deve utilizar o ID do quarto selecionado quando a reserva for solicitada por tipo', () => {
+  const dtoPorTipo: CriarReservaDto = {
+    ...dto,
+    quartoId: undefined,
+    tipoQuartoId: '2',
+  };
+
+  const quartoSelecionado: Quarto = {
+    ...quarto,
+    id: '25',
+    numero: 205,
+  };
+
+  const dados = service.prepararDadosCriacao(
+    dtoPorTipo,
+    quartoSelecionado,
+  );
+
+  expect(dados.quarto_id).toBe(25n);
+  expect(dados.quarto_id).not.toBe(2n);
+
+  expect(dados.valor_diaria_contratada?.toString()).toBe('350');
+  expect(dados.valor_total_contratado?.toString()).toBe('1050');
+});
+
 });

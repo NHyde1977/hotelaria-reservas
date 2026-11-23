@@ -6,16 +6,20 @@ import { ReservasQuartosValidacaoService } from './reservas-quartos-validacao.se
 describe('ReservasQuartosValidacaoService', () => {
   let service: ReservasQuartosValidacaoService;
 
-  const quartoValido: Quarto = {
-    id: 1,
-    status: 'ATIVO',
-    disponibilidade: 'DISPONIVEL',
-    tipo: {
-      nome: 'Duplo',
-      capacidadeMaxima: 2,
-      precoDiaria: '350.00',
-    },
-  };
+const quartoValido: Quarto = {
+  id: '1',
+  id_tipo_quarto: '2',
+  numero: 101,
+  status: 'ATIVO',
+  disponibilidade: 'DISPONIVEL',
+  tipo_quarto: {
+    id: '2',
+    nome: 'Duplo',
+    capacidade_maxima: 2,
+    preco_diaria: '350.00',
+  },
+};
+
 
   beforeEach(() => {
     service = new ReservasQuartosValidacaoService();

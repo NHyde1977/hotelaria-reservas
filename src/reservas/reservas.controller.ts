@@ -1,3 +1,5 @@
+import { ConsultarDisponibilidadeDto } from './dto/consultar-disponibilidade.dto';
+import { ReservasDisponibilidadeService } from './reservas-disponibilidade.service';
 import {
   Body,
   Controller,
@@ -26,7 +28,10 @@ import { InternalApiKeyGuard } from '../common/guards/internal-api-key.guard';
 @ApiTags('Reservas')
 @Controller('reservas')
 export class ReservasController {
-  constructor(private readonly reservasService: ReservasService) {}
+  constructor(
+  private readonly reservasService: ReservasService,
+  private readonly disponibilidadeService: ReservasDisponibilidadeService,
+) {}
 
   
   @Post()
@@ -89,6 +94,60 @@ export class ReservasController {
   async listarReservas() {
     return this.reservasService.listarReservas();
   }
+
+
+@Post('disponibilidade/consultar')
+@UseGuards(InternalApiKeyGuard)
+@HttpCode(200)
+@ApiOperation({
+  summary: 'Consultar disponibilidade de quartos',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Lista de quartos indisponíveis no período.',
+})
+async consultarDisponibilidade(
+  @Body() dto: ConsultarDisponibilidadeDto
+) {
+  const quartosIndisponiveis =
+    await this.disponibilidadeService.consultarQuartosIndisponiveis(
+      dto.quartoIds,
+      dto.checkin,
+      dto.checkout,
+    );
+
+  return { quartosIndisponiveis };
+}
+
+
+@Get('quartos/:quartoId/bloqueio-inativacao')
+@UseGuards(InternalApiKeyGuard)
+@ApiOperation({
+  summary: 'Consultar bloqueio de inativação de quarto',
+})
+@ApiParam({
+  name: 'quartoId',
+  description: 'Identificador do quarto.',
+  example: '1',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Situação de bloqueio retornada com sucesso.',
+})
+async consultarBloqueioInativacao(
+  @Param('quartoId') quartoId: string,
+) {
+  const possuiReservasBloqueantes =
+    await this.disponibilidadeService.possuiReservasBloqueantes(
+      quartoId,
+    );
+
+  return {
+    quartoId,
+    possuiReservasBloqueantes,
+  };
+}
+
 
   @Get(':id')
   @ApiOperation({
