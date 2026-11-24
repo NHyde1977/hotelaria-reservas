@@ -22,6 +22,7 @@ import {
 
 import { CriarReservaDto } from './dto/criar-reserva.dto';
 import { ReservasService } from './reservas.service';
+import { ReservasConfirmacaoService } from './reservas-confirmacao.service';
 import { InternalApiKeyGuard } from '../common/guards/internal-api-key.guard';
 
 
@@ -31,6 +32,7 @@ export class ReservasController {
   constructor(
   private readonly reservasService: ReservasService,
   private readonly disponibilidadeService: ReservasDisponibilidadeService,
+  private readonly reservasConfirmacao: ReservasConfirmacaoService,
 ) {}
 
   
@@ -178,15 +180,19 @@ async consultarBloqueioInativacao(
     return this.reservasService.buscarReservaPorId(id);
   }
 
-  @Patch(':id/confirmar')
-  @UseGuards(InternalApiKeyGuard)
-  @ApiOperation({ summary: 'Confirmar reserva após pagamento' })
-  @ApiResponse({ status: 200, description: 'Reserva confirmada.' })
-  async confirmarReserva(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-  ) {
-    return this.reservasService.confirmarReserva(id);
-  }
+ @Patch(':id/confirmar')
+@UseGuards(InternalApiKeyGuard)
+@ApiOperation({ summary: 'Confirmar reserva após pagamento' })
+@ApiResponse({ status: 200, description: 'Reserva confirmada.' })
+@ApiResponse({ status: 404, description: 'Reserva não encontrada.' })
+@ApiResponse({ status: 409, description: 'Reserva ou pagamento não elegível para confirmação.' })
+@ApiResponse({ status: 502, description: 'Resposta inválida de Pagamentos.' })
+@ApiResponse({ status: 503, description: 'Microsserviço de Pagamentos indisponível.' })
+async confirmarReserva(
+  @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+) {
+  return this.reservasConfirmacao.confirmarReserva(id);
+}
 
   @Patch(':id/cancelar')
   @UseGuards(InternalApiKeyGuard)
