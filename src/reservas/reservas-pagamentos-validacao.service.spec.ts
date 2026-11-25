@@ -134,4 +134,64 @@ describe('ReservasPagamentosValidacaoService', () => {
       ).toBe(false);
     },
   );
+    describe('permiteFinalizacao', () => {
+    const sinal: Pagamento = {
+      ...pagamentoBase,
+      tipo: 'SINAL',
+      valor: '225.00',
+    };
+
+    const saldo: Pagamento = {
+      ...pagamentoBase,
+      id: 'pagamento-2',
+      tipo: 'SALDO',
+      metodo: 'PIX',
+      valor: '525.00',
+    };
+
+    it('deve permitir finalizacao com TOTAL aprovado', () => {
+      expect(
+        service.permiteFinalizacao([pagamentoBase], '750.00'),
+      ).toBe(true);
+    });
+
+    it('deve rejeitar finalizacao somente com SINAL', () => {
+      expect(
+        service.permiteFinalizacao([sinal], '750.00'),
+      ).toBe(false);
+    });
+
+    it('deve permitir finalizacao com SINAL e SALDO aprovados', () => {
+      expect(
+        service.permiteFinalizacao([sinal, saldo], '750.00'),
+      ).toBe(true);
+    });
+
+    it('deve rejeitar finalizacao com SALDO pendente', () => {
+      expect(
+        service.permiteFinalizacao(
+          [sinal, { ...saldo, status: 'PENDENTE' }],
+          '750.00',
+        ),
+      ).toBe(false);
+    });
+
+    it('deve rejeitar finalizacao com SALDO estornado', () => {
+      expect(
+        service.permiteFinalizacao(
+          [sinal, { ...saldo, status: 'ESTORNADO' }],
+          '750.00',
+        ),
+      ).toBe(false);
+    });
+
+    it('deve rejeitar finalizacao com SALDO incorreto', () => {
+      expect(
+        service.permiteFinalizacao(
+          [sinal, { ...saldo, valor: '500.00' }],
+          '750.00',
+        ),
+      ).toBe(false);
+    });
+  });
 });

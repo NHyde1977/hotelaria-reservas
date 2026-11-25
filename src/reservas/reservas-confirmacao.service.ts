@@ -44,4 +44,29 @@ export class ReservasConfirmacaoService {
 
     return this.reservasService.confirmarReserva(reservaId);
   }
+
+  async finalizarReserva(reservaId: string) {
+  const reserva =
+    await this.reservasService.buscarReservaPorId(reservaId);
+
+  if (reserva.status !== 'CHECKOUT_REALIZADO') {
+    throw new ConflictException(
+      `Reserva ${reservaId} não está com checkout realizado.`,
+    );
+  }
+
+  const pagamentos =
+    await this.pagamentosClient.buscarPorReserva(reservaId);
+
+  if (!this.pagamentosValidacao.permiteFinalizacao(
+    pagamentos,
+    reserva.valor_total_contratado,
+  )) {
+    throw new ConflictException(
+      'Não é possível finalizar a reserva sem a quitação integral.',
+    );
+  }
+
+  return this.reservasService.finalizarReserva(reservaId);
+}
 }

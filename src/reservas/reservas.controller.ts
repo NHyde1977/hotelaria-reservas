@@ -224,14 +224,19 @@ async confirmarReserva(
     return this.reservasService.realizarCheckout(id);
   }
 
+  
   @Patch(':id/finalizar')
-  @UseGuards(InternalApiKeyGuard)
-  @ApiOperation({ summary: 'Finalizar reserva' })
-  @ApiResponse({ status: 200, description: 'Reserva finalizada.' })
-  async finalizarReserva(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-  ) {
-    return this.reservasService.finalizarReserva(id);
-  }
+@UseGuards(InternalApiKeyGuard)
+@ApiOperation({ summary: 'Finalizar reserva após quitação integral' })
+@ApiResponse({ status: 200, description: 'Reserva finalizada.' })
+@ApiResponse({ status: 404, description: 'Reserva não encontrada.' })
+@ApiResponse({ status: 409, description: 'Checkout não realizado ou pagamento incompleto.' })
+@ApiResponse({ status: 502, description: 'Resposta inválida de Pagamentos.' })
+@ApiResponse({ status: 503, description: 'Microsserviço de Pagamentos indisponível.' })
+async finalizarReserva(
+  @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+) {
+  return this.reservasConfirmacao.finalizarReserva(id);
+}
 
 }
