@@ -49,7 +49,7 @@ async function bootstrap() {
     await app.startAllMicroservices();
   }
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3002, '127.0.0.1');
 }
 
 bootstrap();
